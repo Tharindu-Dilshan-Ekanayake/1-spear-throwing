@@ -82,10 +82,11 @@ export function roundTree(b, x, y, z, s, rand) {
     b.addOn(x, ly, z, w * s, t * s, w * s, leaf)
     ly += t * s
   }
-  // A couple of bulges so it isn't a perfect stack.
+  // A couple of bulges so it isn't a perfect stack, at different heights: level with
+  // each other, two that overlapped flickered.
   for (let i = 0; i < 2; i += 1) {
     const a = rand() * Math.PI * 2
-    b.add(x + Math.cos(a) * 2.2 * s, y + h + 0.9 * s, z + Math.sin(a) * 2.2 * s, 1.6 * s, 1.4 * s, 1.6 * s, pick(rand, leaves))
+    b.add(x + Math.cos(a) * 2.2 * s, y + h + (0.9 + i * 0.5) * s, z + Math.sin(a) * 2.2 * s, 1.6 * s, 1.4 * s, 1.6 * s, pick(rand, leaves))
   }
 }
 
@@ -215,7 +216,9 @@ export function flowers(b, x, y, z, rand) {
   for (let i = 0; i < 4; i += 1) {
     const fx = x + (rand() - 0.5) * 2.4
     const fz = z + (rand() - 0.5) * 2.4
-    b.addOn(fx, y, fz, 0.08, 0.4, 0.08, '#3a9a2a', STYLE.SMOOTH)
-    b.addOn(fx, y + 0.4, fz, 0.3, 0.2, 0.3, pick(rand, colors), STYLE.SMOOTH)
+    // Stems of different lengths, so two heads that touch don't share a top.
+    const stem = 0.34 + i * 0.06
+    b.addOn(fx, y, fz, 0.08, stem, 0.08, '#3a9a2a', STYLE.SMOOTH)
+    b.addOn(fx, y + stem, fz, 0.3, 0.2, 0.3, pick(rand, colors), STYLE.SMOOTH)
   }
 }

@@ -1,4 +1,4 @@
-import { EGGS, LANES, PETS, PLANES, SHOP, WORLD2_POWER } from '@shared/balance'
+import { EGGS, LANES, PETS, PLANES, SHOP, WORLD2_POWER, WORLD3_POWER } from '@shared/balance'
 import { formatNumber } from '@shared/format'
 import {
   EGG_STANDS,
@@ -8,6 +8,7 @@ import {
   laneCenterX,
   PLANE_PADS,
   PORTAL,
+  PORTAL_WEST,
   SPHINX_STAND,
 } from '@shared/world'
 
@@ -25,6 +26,7 @@ export const TEXT = {
   red: ['#ffb0a8', '#ff4a3b', '#d4142a'],
   blue: ['#e0faff', '#7fe2ff', '#2fa8ff'],
   purple: ['#f3e0ff', '#c58bff', '#8a3be0'],
+  orange: ['#fff0c2', '#ffae3c', '#ff6a00'],
 }
 
 const tint = (hex) => ['#ffffff', hex, hex]
@@ -166,7 +168,43 @@ const portalLabel = () => ({
   fade: 140,
 })
 
+/**
+ * Over the west portal: the way to World 3 (what it needs, or that it's open), or in
+ * World 3 the way home.
+ */
+export function westPortalLabelSpec(profile) {
+  const lines =
+    profile.world === 3
+      ? [
+          { text: 'World 1', size: 58, gradient: TEXT.blue },
+          { text: 'Back Home', size: 42, gradient: TEXT.white },
+        ]
+      : [
+          { text: 'World 3', size: 58, gradient: TEXT.orange },
+          { text: 'HALLOWEEN', size: 46, gradient: TEXT.purple },
+          profile.worlds.includes(3)
+            ? { text: 'OPEN!', size: 42, gradient: TEXT.green }
+            : { text: `Needs ${formatNumber(WORLD3_POWER)} Power`, size: 42, icon: 'muscle', gradient: TEXT.gold },
+        ]
+  return { lines, pxPerUnit: 56 }
+}
+
+const westPortalLabel = (profile) => ({
+  id: 'portal-west',
+  position: [PORTAL_WEST.x, PORTAL_WEST.radius * 2 + 3.4, PORTAL_WEST.z],
+  spec: westPortalLabelSpec(profile),
+  // Room for the biggest it gets.
+  reserve: {
+    lines: [
+      { text: 'World 3', size: 58 },
+      { text: 'HALLOWEEN', size: 46 },
+      { text: `Needs ${formatNumber(WORLD3_POWER)} Power`, size: 42, icon: 'muscle' },
+    ],
+  },
+  fade: 140,
+})
+
 /** Every label in the lobby. */
 export function lobbyLabels(profile, { sphinxStock = 0 } = {}) {
-  return [...laneLabels(), ...padLabels(profile), ...eggLabels(), sphinxLabel(sphinxStock), freeRewardLabel(), portalLabel()]
+  return [...laneLabels(), ...padLabels(profile), ...eggLabels(), sphinxLabel(sphinxStock), freeRewardLabel(), portalLabel(), westPortalLabel(profile)]
 }

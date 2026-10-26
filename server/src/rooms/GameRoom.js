@@ -101,7 +101,7 @@ export class GameRoom extends Room {
     const player = new PlayerState()
     const spawnX = SPAWN.x + (Math.random() - 0.5) * 6
     const spawnZ = SPAWN.z + (Math.random() - 0.5) * 4
-    Object.assign(player, { name, x: spawnX, y: 0, z: spawnZ, rotY: Math.PI, anim: 'idle' })
+    Object.assign(player, { name, x: spawnX, y: 0, z: spawnZ, rotY: Math.PI, anim: 'idle', world: profile.world })
     this.state.players.set(client.sessionId, player)
 
     const session = new PlayerSession(profile, {
@@ -117,9 +117,19 @@ export class GameRoom extends Room {
       onThrow: (result) => {
         this.broadcast(
           'ghostThrow',
-          { sid: client.sessionId, distance: result.distance, duration: result.duration, planeId: profile.equippedPlane, x: player.x, z: player.z },
+          { sid: client.sessionId, distance: result.distance, duration: result.duration, planeId: profile.equippedPlane, x: player.x, z: player.z, world: profile.world },
           { except: client },
         )
+      },
+      // A portal moved them to spawn in another world: that's where they are now, so the
+      // next position report is checked from there.
+      onTravel: (world, spawn) => {
+        const member = this.members.get(client.sessionId)
+        if (member) {
+          member.lastPos = { x: spawn.x, z: spawn.z }
+          member.lastPosAt = Date.now()
+        }
+        Object.assign(player, { x: spawn.x, y: 0, z: spawn.z, world })
       },
     })
 

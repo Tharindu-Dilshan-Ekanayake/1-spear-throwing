@@ -13,3 +13,10 @@ export function installDebugHooks() {
   if (!new URLSearchParams(window.location.search).has('debug')) return
   window.__pp = { runtime, useGame, useQuality, actions, remotePlayers }
 }
+
+/** With `?debug`, the renderer and scene too, for draw call, triangle and texture counts. */
+export function exposeRenderer(gl, scene) {
+  if (typeof window === 'undefined' || !window.__pp) return
+  window.__pp.gl = gl
+  window.__pp.scene = scene
+}

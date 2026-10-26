@@ -1,6 +1,6 @@
 import { waitForSDK } from '../bloxity/sdk'
 import { runtime } from '../game/runtime'
-import { getGame } from '../store/game'
+import { getGame, useGame } from '../store/game'
 import { setTransport } from './actions'
 import { handleServerEvent } from './events'
 import { createLocalServer } from './localServer'
@@ -120,6 +120,19 @@ function attachRoom(room, identity, Callbacks) {
     })
   }
 
+  // Only players in our own world are drawn; the rest share the room unseen.
+  const showIfSameWorld = (player, sessionId) => {
+    // 0 (unset, from a server older than worlds) is World 1.
+    if ((player.world || 1) === getGame().profile.world) upsertRemotePlayer(sessionId, player)
+    else removeRemotePlayer(sessionId)
+  }
+  const unsubscribeWorld = useGame.subscribe((state, prev) => {
+    if (state.profile.world === prev.profile.world) return
+    room.state.players?.forEach((player, sessionId) => {
+      if (sessionId !== room.sessionId) showIfSameWorld(player, sessionId)
+    })
+  })
+
   room.onMessage('*', (type, payload) => {
     switch (type) {
       case 'spawn':
@@ -135,7 +148,7 @@ function attachRoom(room, identity, Callbacks) {
         getGame().setLeaderboards(payload)
         break
       case 'ghostThrow':
-        runtime.ghostThrows.push({ ...payload, startedAt: performance.now() })
+        if (payload.world === undefined || payload.world === getGame().profile.world) runtime.ghostThrows.push({ ...payload, startedAt: performance.now() })
         break
       case 'kicked':
         leaving = true
@@ -148,8 +161,8 @@ function attachRoom(room, identity, Callbacks) {
 
   callbacks.onAdd('players', (player, sessionId) => {
     if (sessionId !== room.sessionId) {
-      upsertRemotePlayer(sessionId, player)
-      callbacks.onChange(player, () => upsertRemotePlayer(sessionId, player))
+      showIfSameWorld(player, sessionId)
+      callbacks.onChange(player, () => showIfSameWorld(player, sessionId))
     }
     syncLobby()
   })
@@ -184,6 +197,7 @@ function attachRoom(room, identity, Callbacks) {
   room.onReconnect(syncLobby)
   room.onLeave((code) => {
     window.removeEventListener('pagehide', onPageHide)
+    unsubscribeWorld()
     clearInterval(posId)
     sendLook = () => {}
     clearRemotePlayers()
@@ -207,6 +221,7 @@ function attachRoom(room, identity, Callbacks) {
     room,
     close: () => {
       leaving = true
+      unsubscribeWorld()
       clearInterval(posId)
       clearRemotePlayers()
       room.leave(true)

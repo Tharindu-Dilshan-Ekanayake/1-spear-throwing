@@ -69,3 +69,42 @@ export const LIGHTS = {
   /** Blur radius of shadow edges, in shadow-map texels. */
   shadowSoftness: 3,
 }
+
+/** World 1's hill and grass-bed green: the grass cap on STYLE.TERRAIN blocks. */
+export const GRASS = '#9bd94a'
+
+/**
+ * World 3, Halloween: the same toy world at dusk - an indigo sky fading to purple at
+ * the horizon (and purple fog to match), moonlit lavender light, dark mossy hills, and
+ * orange where World 1 is gold. Brighter than a real night, so the toy colours still
+ * read on a phone; the jack-o'-lanterns and witch fires glow on top of it.
+ */
+export const HALLOWEEN = {
+  sky: { top: '#0f0726', horizon: '#6a3a85', exponent: 0.5 },
+  fog: { color: '#6a3a85' },
+  clouds: { top: '#a48ccb', bottom: '#3b2856' },
+  lights: {
+    ...LIGHTS,
+    hemiSky: '#cdbcff',
+    hemiGround: '#4a3561',
+    hemiIntensity: 1.8,
+    sunColor: '#c9d6ff',
+    sunIntensity: 1.25,
+    shadowIntensity: 0.6,
+  },
+  grass: '#6c8a43',
+  palette: {
+    plaza: '#4d4262',
+    path: '#6e608a',
+    pathEdge: '#382e4a',
+    sand: '#ff8a1f',
+    sandEdge: '#c25a0e',
+    carpet: '#6a2c91',
+    gold: '#ff8c1a',
+    dirt: '#3f3654',
+    trunk: '#2b2233',
+    leaves: ['#ff7a1c', '#e0560f', '#8a3cc7'],
+    white: '#e8e2f4',
+    water: '#59e04a',
+  },
+}

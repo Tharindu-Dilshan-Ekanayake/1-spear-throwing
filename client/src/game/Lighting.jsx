@@ -5,6 +5,7 @@ import { Vector3 } from 'three'
 import { useQuality } from '../store/quality'
 import { runtime } from './runtime'
 import { LIGHTS } from './sceneStyle'
+import { useWorld } from './worldLook'
 
 const SUN_DIRECTION = new Vector3(...LIGHTS.sunDirection).normalize()
 /** How far back along SUN_DIRECTION the light sits from the point it shadows. */
@@ -13,7 +14,8 @@ const SUN_DISTANCE = 70
 const SHADOW_EXTENT = 28
 
 /**
- * Bright, even daylight: a white hemisphere fill and a warm sun.
+ * Bright, even daylight: a white hemisphere fill and a warm sun (in World 3, a
+ * lavender fill and a cool moon, from the world's look).
  *
  * Only the HIGH preset casts realtime shadows; lower presets use blob shadows instead
  * (see BlobShadows), so the shadow pass costs nothing there.
@@ -26,6 +28,7 @@ export function Lighting() {
   const scene = useThree((s) => s.scene)
   const shadows = useQuality((s) => s.settings.shadows === 'realtime')
   const mapSize = useQuality((s) => s.settings.shadowMapSize) || 1024
+  const lights = useWorld((s) => s.look.lights)
 
   useLayoutEffect(() => {
     const sun = sunRef.current
@@ -58,16 +61,16 @@ export function Lighting() {
 
   return (
     <>
-      <hemisphereLight args={[LIGHTS.hemiSky, LIGHTS.hemiGround, LIGHTS.hemiIntensity]} />
+      <hemisphereLight color={lights.hemiSky} groundColor={lights.hemiGround} intensity={lights.hemiIntensity} />
       <directionalLight
         ref={sunRef}
         castShadow={shadows}
-        color={LIGHTS.sunColor}
-        intensity={LIGHTS.sunIntensity}
+        color={lights.sunColor}
+        intensity={lights.sunIntensity}
         position={SUN_DIRECTION.clone().multiplyScalar(SUN_DISTANCE).toArray()}
         shadow-mapSize={[mapSize, mapSize]}
         shadow-radius={LIGHTS.shadowSoftness}
-        shadow-intensity={LIGHTS.shadowIntensity}
+        shadow-intensity={lights.shadowIntensity}
         shadow-bias={-0.0005}
         shadow-normalBias={0.04}
       />

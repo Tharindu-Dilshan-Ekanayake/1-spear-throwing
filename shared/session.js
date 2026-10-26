@@ -20,10 +20,11 @@ import {
   isLaneUnlocked,
   isMaxLevel,
   planeById,
+  travel,
   unequipPet,
   usePotion,
 } from './logic.js'
-import { eggStandNear, FREE_REWARD, inRect, inThrowArea, laneRect, PLANE_PADS, padRect, PORTAL } from './world.js'
+import { eggStandNear, FREE_REWARD, inRect, inThrowArea, laneRect, PLANE_PADS, padRect, PORTAL, portalAt, SPAWN } from './world.js'
 
 const PLANES_INDEX = Object.fromEntries(PLANES.map((p, i) => [p.id, i]))
 
@@ -49,8 +50,10 @@ const PAD_SLACK = 2
  * - 'throw'    { distance, grade, wins, trophies, duration, multiplier }  a throw to replay
  * - 'hatch'    { eggId, pets: [{ uid, id }] }  pets to reveal
  * - 'badge'    { id, name }
+ * - 'world'    { world, x, z }  moved to another world, standing at (x, z)
  *
- * `onThrow(result)` lets the host tell other players about a throw (ghost planes).
+ * `onThrow(result)` lets the host tell other players about a throw (ghost planes);
+ * `onTravel(world, spawn)` that the player moved world, and where they now stand.
  */
 export class PlayerSession {
   /**
@@ -60,13 +63,14 @@ export class PlayerSession {
    *           onPurchase?: (productId: string) => boolean }} options
    *   `onPurchase` lets the host veto or count a shop sale (stock limits).
    */
-  constructor(profile, { now, emit, getPosition, onPurchase, onThrow }) {
+  constructor(profile, { now, emit, getPosition, onPurchase, onThrow, onTravel }) {
     this.profile = profile
     this.session = createSession(now)
     this.emit = emit
     this.getPosition = getPosition
     this.onPurchase = onPurchase
     this.onThrow = onThrow
+    this.onTravel = onTravel
 
     /** Lane the client says it's in; verified against position every tick. */
     this.lane = -1
@@ -232,11 +236,27 @@ export class PlayerSession {
       this.afterReward(result)
     },
 
-    portal() {
+    /**
+     * Stepping into a portal. World 2's only has a badge for now; the west one takes
+     * you to World 3, or from World 3 back to World 1.
+     */
+    portal(_payload, now) {
+      if (now < this.busyUntil) return
       const p = this.getPosition()
-      if (Math.hypot(p.x - PORTAL.x, p.z - PORTAL.z) > PORTAL.radius + 2) return
-      if (this.profile.power < WORLD2_POWER) return
-      this.badge('world2')
+      const portal = portalAt(p.x, p.z, 2)
+      if (portal === PORTAL) {
+        if (this.profile.power >= WORLD2_POWER) this.badge('world2')
+        return
+      }
+      if (!portal) return
+      const result = travel(this.profile, this.profile.world === 3 ? 1 : 3)
+      if (!result.ok) return
+      this.lane = -1
+      this.dirty = true
+      const spawn = { x: SPAWN.x + (Math.random() - 0.5) * 6, z: SPAWN.z + (Math.random() - 0.5) * 4 }
+      this.onTravel?.(result.world, spawn)
+      this.emit('world', { world: result.world, ...spawn })
+      if (result.world === 3) this.badge('world3')
     },
 
     usePotion({ itemId }, now) {

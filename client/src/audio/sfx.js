@@ -326,7 +326,23 @@ const GROUND = {
     tone(1760, { type: 'triangle', at: 0.05, duration: 0.6, volume: 0.03, slideTo: 2637, room: 0.5 })
   },
 }
-const ZONE_GROUND = { river: 'dirt', farm: 'dirt', jungle: 'dirt', desert: 'sand', snow: 'snow', volcano: 'lava', space: 'space' }
+const ZONE_GROUND = {
+  river: 'dirt',
+  farm: 'dirt',
+  jungle: 'dirt',
+  desert: 'sand',
+  snow: 'snow',
+  volcano: 'lava',
+  space: 'space',
+  // World 3, Halloween.
+  pumpkin: 'dirt',
+  graveyard: 'dirt',
+  haunted: 'dirt',
+  swamp: 'dirt',
+  bones: 'sand',
+  vampire: 'lava',
+  spirit: 'space',
+}
 
 /** A short sound as the flight enters each stage. */
 const ZONE_STINGS = {
@@ -363,6 +379,41 @@ const ZONE_STINGS = {
   space: () => {
     tone(200, { duration: 1.2, volume: 0.05, slideTo: 1600, attack: 0.2, room: 0.5 })
     tone(300, { type: 'triangle', at: 0.2, duration: 1.0, volume: 0.03, slideTo: 2400, room: 0.5 })
+  },
+  // World 3, Halloween.
+  pumpkin: () => {
+    // A witch's cackle: quick falling squawks.
+    ;[880, 784, 698, 622].forEach((f, i) => tone(f, { type: 'triangle', at: i * 0.11, duration: 0.09, volume: 0.04, slideTo: f * 0.8, room: 0.3 }))
+  },
+  graveyard: () => {
+    // A distant bell tolling, over a cold wind.
+    tone(196, { duration: 1.6, volume: 0.06, room: 0.6 })
+    tone(392, { duration: 1.2, volume: 0.02, room: 0.6 })
+    noise({ duration: 1.4, volume: 0.05, from: 500, to: 1400, q: 2, peak: 0.5, room: 0.3 })
+  },
+  haunted: () => {
+    // An owl: hoo, hoo-hoo.
+    tone(420, { duration: 0.22, volume: 0.05, slideTo: 380, room: 0.5 })
+    tone(420, { at: 0.4, duration: 0.12, volume: 0.045, slideTo: 390, room: 0.5 })
+    tone(400, { at: 0.56, duration: 0.2, volume: 0.045, slideTo: 360, room: 0.5 })
+  },
+  swamp: () => {
+    // Bubbles rising, then a croak.
+    for (let i = 0; i < 5; i += 1) tone(300 + i * 90, { at: i * 0.07, duration: 0.06, volume: 0.04, slideTo: 600 + i * 120, room: 0.2 })
+    tone(110, { type: 'sawtooth', at: 0.45, duration: 0.18, volume: 0.04, slideTo: 90, room: 0.2 })
+  },
+  bones: () => {
+    // Bones rattling.
+    for (let i = 0; i < 6; i += 1) noise({ type: 'highpass', at: i * 0.06, duration: 0.05, volume: 0.07, from: 3200, to: 2600, q: 1.5, peak: 0.2 })
+  },
+  vampire: () => {
+    // A minor organ chord.
+    for (const f of [220, 262, 330]) tone(f, { type: 'sawtooth', duration: 1.1, volume: 0.022, attack: 0.08, room: 0.6 })
+  },
+  spirit: () => {
+    // A ghost's wail, rising and falling.
+    tone(330, { duration: 0.6, volume: 0.04, slideTo: 660, attack: 0.15, room: 0.6 })
+    tone(660, { at: 0.55, duration: 0.8, volume: 0.035, slideTo: 300, room: 0.6 })
   },
 }
 

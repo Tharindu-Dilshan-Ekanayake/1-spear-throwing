@@ -12,6 +12,7 @@ import Panels from './ui/panels/Panels'
 import PopupLayer from './ui/PopupLayer'
 import ReplacedOverlay from './ui/ReplacedOverlay'
 import TouchControls from './ui/TouchControls'
+import WorldFade from './ui/WorldFade'
 
 function App() {
   const [ready, setReady] = useState(false)
@@ -43,6 +44,7 @@ function App() {
           <HatchOverlay />
         </>
       )}
+      <WorldFade />
       <ReplacedOverlay />
       <LoadingScreen done={ready} />
     </div>

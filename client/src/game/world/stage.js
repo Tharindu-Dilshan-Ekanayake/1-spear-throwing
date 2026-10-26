@@ -39,9 +39,10 @@ export function buildStage(blocks, props, { detail = true } = {}) {
   const depth = maxZ - minZ
   const midZ = (minZ + maxZ) / 2
 
-  // Body in sand, with a crimson band around its sides and a gold edge on top.
+  // Body in sand, with a crimson band around its sides and a gold edge on top. The band
+  // stays under the step's tread, which it runs beneath.
   blocks.addOn(0, -0.1, midZ, width, height + 0.1, depth, SAND, STYLE.STUDS)
-  blocks.addOn(0, 0, midZ, width + 0.3, height * 0.5, depth + 0.3, CRIMSON)
+  blocks.addOn(0, 0, midZ, width + 0.3, height * 0.4, depth + 0.3, CRIMSON)
   for (const side of [-1, 1]) blocks.addOn(side * (width / 2 - 0.25), height, midZ, 0.35, 0.06, depth - 0.6, GOLD, STYLE.GLOW)
 
   // The throw pad: a white border with the red track raised on it, lane lines and a
@@ -52,7 +53,8 @@ export function buildStage(blocks, props, { detail = true } = {}) {
   const padD = THROW_AREA.maxZ - THROW_AREA.minZ
   blocks.addOn(padX, height, padZ, padW + 0.8, 0.06, padD + 0.8, '#ffffff', STYLE.SMOOTH)
   blocks.addOn(padX, height + 0.06, padZ, padW, 0.06, padD, ARENA.track, STYLE.STUDS)
-  for (const x of [-padW / 4, padW / 4]) blocks.addOn(padX + x, height + 0.12, padZ, 0.14, 0.02, padD - 0.4, '#ffffff', STYLE.SMOOTH)
+  // The lane lines stop short of the foul line rather than run under it.
+  for (const x of [-padW / 4, padW / 4]) blocks.addOn(padX + x, height + 0.12, padZ + 0.25, 0.14, 0.02, padD - 0.9, '#ffffff', STYLE.SMOOTH)
   blocks.addOn(padX, height + 0.12, THROW_AREA.minZ + 0.35, padW - 0.2, 0.03, 0.3, '#ffffff', STYLE.GLOW)
   // Glowing corner marks around the pad.
   for (const sx of [-1, 1]) {
@@ -73,11 +75,14 @@ export function buildStage(blocks, props, { detail = true } = {}) {
     blocks.addOn(0, -0.1, maxZ + (front + back) / 2, width - 4, stepHeight + 0.1, front - back, i % 2 ? SHADE : MARBLE, STYLE.STONE)
   }
 
-  // Front railing: marble posts and a gold rail. The spear flies over it.
+  // Front railing between the corner pillars: marble posts and a gold rail, its ends
+  // buried in the pillars. The rail is a touch deeper than the posts and the posts stay
+  // clear of the pillars' bases, so no two faces line up. The spear flies over it.
   const railZ = minZ + 0.25
-  for (let x = minX + 0.5; x <= maxX - 0.4; x += 2) blocks.addOn(x, height, railZ, 0.3, 1, 0.3, MARBLE, STYLE.SMOOTH)
-  blocks.addOn(0, height + 0.9, railZ, width - 0.4, 0.22, 0.3, GOLD, STYLE.GLOW)
-  blocks.addOn(0, height + 0.4, railZ, width - 0.4, 0.12, 0.2, MARBLE)
+  const railSpan = width - 2.7
+  for (let x = -9; x <= 9; x += 2) blocks.addOn(x, height, railZ, 0.3, 1, 0.3, MARBLE, STYLE.SMOOTH)
+  blocks.addOn(0, height + 0.9, railZ, railSpan, 0.22, 0.36, GOLD, STYLE.GLOW)
+  blocks.addOn(0, height + 0.4, railZ, railSpan, 0.12, 0.2, MARBLE)
 
   // Pillars on the front corners: fluted marble on a stone base, a gold capital, fire on
   // top, and a crimson banner with a gold star hanging on the side facing the plaza.
@@ -92,7 +97,8 @@ export function buildStage(blocks, props, { detail = true } = {}) {
     blocks.addOn(x, pillarTop - 4.6, z + 0.72, 1.1, 3.6, 0.08, CRIMSON, STYLE.SMOOTH)
     props.add(STAR, { position: [x, pillarTop - 2.4, z + 0.8], color: GOLD, style: STYLE.GLOW })
     if (detail) {
-      for (const dx of [-0.58, 0.58]) blocks.addOn(x + dx, pillarTop - 4.6, z + 0.73, 0.08, 3.6, 0.1, GOLD, STYLE.GLOW)
+      // Thicker than the banner, so they stand proud of both its faces.
+      for (const dx of [-0.58, 0.58]) blocks.addOn(x + dx, pillarTop - 4.6, z + 0.72, 0.08, 3.6, 0.12, GOLD, STYLE.GLOW)
     }
   }
 }

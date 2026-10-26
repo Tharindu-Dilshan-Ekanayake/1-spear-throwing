@@ -39,6 +39,9 @@ export function toColor(value) {
 
 const FIELDS = 13
 
+const sameColor = (c, r, g, b) => Math.abs(c.r - r) < 1e-4 && Math.abs(c.g - g) < 1e-4 && Math.abs(c.b - b) < 1e-4
+const parseSwaps = (swaps) => swaps.map(([from, to, style]) => ({ from: toColor(from), to: toColor(to), style }))
+
 /**
  * A bag of axis-aligned (optionally Y-rotated) boxes.
  *
@@ -84,6 +87,25 @@ export class BlockSet {
   /** Drops every box added since the set held `count` of them. */
   truncate(count) {
     this.data.length = count * FIELDS
+    return this
+  }
+
+  /**
+   * Repaints every box of a colour: `swaps` is [[from, to, style?]], colours as hex
+   * strings; a style, if given, replaces the box's too. For reusing one world's
+   * builders in another's palette.
+   */
+  recolor(swaps) {
+    const list = parseSwaps(swaps)
+    const d = this.data
+    for (let o = 0; o < d.length; o += FIELDS) {
+      const swap = list.find(({ from }) => sameColor(from, d[o + 9], d[o + 10], d[o + 11]))
+      if (!swap) continue
+      d[o + 9] = swap.to.r
+      d[o + 10] = swap.to.g
+      d[o + 11] = swap.to.b
+      if (swap.style !== undefined) d[o + 12] = swap.style
+    }
     return this
   }
 
@@ -198,6 +220,19 @@ export class PropBuilder {
     g.setAttribute('color', new BufferAttribute(colors, 3))
     g.setAttribute('aStyle', new BufferAttribute(styles, 1))
     this.parts.push(g)
+    return this
+  }
+
+  /** Repaints every part of a colour, as BlockSet.recolor does. */
+  recolor(swaps) {
+    const list = parseSwaps(swaps)
+    for (const part of this.parts) {
+      const colors = part.getAttribute('color')
+      const swap = list.find(({ from }) => sameColor(from, colors.getX(0), colors.getY(0), colors.getZ(0)))
+      if (!swap) continue
+      for (let i = 0; i < colors.count; i += 1) colors.setXYZ(i, swap.to.r, swap.to.g, swap.to.b)
+      if (swap.style !== undefined) part.getAttribute('aStyle').array.fill(swap.style)
+    }
     return this
   }
 

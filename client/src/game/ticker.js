@@ -8,6 +8,7 @@ import {
   laneRect,
   padAt,
   PORTAL,
+  portalAt,
   SPHINX_STAND,
 } from '@shared/world'
 
@@ -61,6 +62,7 @@ export function startGameTicker() {
     const game = getGame()
     const p = runtime.player.position
     const egg = eggStandNear(p.x, p.z)
+    const portal = portalAt(p.x, p.z)
     const zone = {
       lane: laneAt(p.x, p.z, -0.2),
       // Standing at a lane's edge (a locked lane's wall stops you there).
@@ -69,13 +71,14 @@ export function startGameTicker() {
       throwArea: inThrowArea(p.x, p.z),
       pad: padAt(p.x, p.z),
       egg: egg ? egg.eggId : null,
-      portal: Math.hypot(p.x - PORTAL.x, p.z - PORTAL.z) < PORTAL.radius,
+      // 'east' (World 2) or 'west' (World 3, or home from it), while in its swirl.
+      portal: portal ? (portal === PORTAL ? 'east' : 'west') : null,
       freeReward: Math.hypot(p.x - FREE_REWARD.x, p.z - FREE_REWARD.z) < FREE_REWARD.radius,
     }
     // The power meter comes down if you leave the throw area or open a menu.
     if (aim.active && (!zone.throwArea || game.panel)) cancelAim()
     if (!sameZone(zone, game.zone)) {
-      if (zone.portal && !game.zone.portal) actions.portal()
+      if (zone.portal && zone.portal !== game.zone.portal) actions.portal()
       game.setZone(zone)
     }
 

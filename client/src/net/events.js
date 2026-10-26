@@ -1,4 +1,5 @@
 import { sfx } from '../audio/sfx'
+import { cancelAim } from '../game/aim'
 import { beginFlight } from '../game/flight/flightControl'
 import { burst, queueTrainFx } from '../game/fx/fxQueue'
 import { runtime } from '../game/runtime'
@@ -66,6 +67,14 @@ export function handleServerEvent(type, payload) {
 
     case 'badge':
       sfx.wins()
+      break
+
+    // Through a portal: the screen fades, the new world comes up, and we stand at its
+    // spawn (see worldLook.js). The profile that follows says which world it is.
+    case 'world':
+      cancelAim()
+      runtime.pendingSpawn = { x: payload.x, z: payload.z }
+      sfx.rebirth()
       break
 
     default:
