@@ -17,7 +17,7 @@ import {
   Vector3,
 } from 'three'
 
-import { TROPHY_FIRST, TROPHY_SPACING, ZONES } from '@shared/balance'
+import { TROPHY_FIRST, TROPHY_SPACING } from '@shared/balance'
 import { formatNumber } from '@shared/format'
 import { trophyValue, winsMultiplier, zoneIndexAt } from '@shared/logic'
 import { mulberry32 } from '@shared/rng'
@@ -35,12 +35,12 @@ import { createTrail } from '../fx/trail'
 import { LabelBatch } from '../labels/LabelBatch'
 import { sharedMaterials, STYLE } from '../materials'
 import { runtime } from '../runtime'
-import { FOG, SKY } from '../sceneStyle'
 import { skyUniforms } from '../skyState'
+import { useWorld } from '../worldLook'
 import { createSpearModel, SPEAR_BUTT, spearOrientation } from '../spear'
 import { flight } from './flightControl'
 import { writeDistance } from './hudLink'
-import { buildChunk, CHUNK, GATES, ZONE_THEMES, zAt } from './track'
+import { CHUNK, TRACK, zAt } from './track'
 
 /**
  * Above this speed (m/s) the flight goes to "warp": no new scenery is built, a plain
@@ -55,9 +55,10 @@ const WARP_LENGTH = 1400
 /** Builder passes between prefetch builds while in warp (~1 chunk per 120 ms). */
 const PREFETCH_EVERY = 4
 
-/** Warp-floor colours and styles per zone, parsed once. */
-const WARP_THEMES = ZONES.map((z) => {
-  const t = ZONE_THEMES[z.id]
+/** A track's warp-floor colours and styles, per zone. */
+const warpThemes = (track) =>
+  track.zones.map((z) => {
+  const t = track.themes[z.id]
   return {
     ground: t.ground ? new Color(t.ground) : null,
     groundStyle: t.groundStyle ?? STYLE.STUDS,
@@ -68,7 +69,7 @@ const WARP_THEMES = ZONES.map((z) => {
     roadHalf: t.roadHalf,
     kerbHalf: t.kerbHalf,
   }
-})
+  })
 
 /** Chunks kept behind the focus point, and how many may be built per builder pass. */
 const BEHIND = 60
@@ -120,9 +121,16 @@ const streakState = (() => {
   return Array.from({ length: STREAKS }, () => ({ a: r() * Math.PI * 2, r: 1.6 + r() * 3.2, z: -r() * 30 }))
 })()
 
-const ZONE_SKIES = ZONES.map((z) => ZONE_THEMES[z.id].sky.map((c) => new Color(c)))
-const DEFAULT_TOP = new Color(SKY.top)
-const DEFAULT_HORIZON = new Color(SKY.horizon)
+/** A track's sky per zone: [top, horizon]. */
+const zoneSkies = (track) => track.zones.map((z) => track.themes[z.id].sky.map((c) => new Color(c)))
+
+/** Back to the world's own sky (and fog), as when nothing is flying. */
+function restoreSky(scene) {
+  const { sky, fog } = useWorld.getState().look
+  skyUniforms.topColor.value.set(sky.top)
+  skyUniforms.horizonColor.value.set(sky.horizon)
+  if (scene?.fog) scene.fog.color.set(fog.color)
+}
 
 const ease = (t) => 1 - Math.pow(1 - t, 2.4)
 const smoothstep = (a, b, x) => {
@@ -174,9 +182,9 @@ function createTrophyGeometry() {
 let warpZone = -1
 
 /** Moves the warp floor under the plane and restyles it when the zone changes. */
-function updateWarpFloor(floor, meter) {
-  const zi = zoneIndexAt(meter)
-  const theme = WARP_THEMES[zi]
+function updateWarpFloor(floor, meter, zones, themes) {
+  const zi = zoneIndexAt(meter, zones)
+  const theme = themes[zi]
   const centerZ = zAt(meter + WARP_LENGTH * 0.35)
   const parts = [
     // [width, height, top, colour, style]
@@ -223,8 +231,13 @@ function planePosition(t, start, out) {
  * Lazily loaded: the track, the flying spear with its trail, and the chase camera.
  * While nobody is flying it still streams the first stretch of track, which is the
  * field you see leading out of the lobby.
+ *
+ * `track` is the world's (see defineTrack); a world change remounts this with the new
+ * one, which throws away every chunk of the old.
+ *
+ * @param {{ track?: ReturnType<typeof import('./track').defineTrack> }} props
  */
-export default function Flight() {
+export default function Flight({ track = TRACK }) {
   const camera = useThree((s) => s.camera)
   const scene = useThree((s) => s.scene)
   const gl = useThree((s) => s.gl)
@@ -251,6 +264,9 @@ export default function Flight() {
   const gatesRef = useRef(null)
   const speedLines = useQuality((s) => s.settings.speedLines)
   const particles = useQuality((s) => s.settings.particles)
+  const { zones, gates } = track
+  const warp = useMemo(() => warpThemes(track), [track])
+  const skies = useMemo(() => zoneSkies(track), [track])
 
   const assets = useMemo(() => {
     const trophies = createToyInstances(createTrophyGeometry(), sharedMaterials().toy, MAX_TROPHIES)
@@ -318,7 +334,7 @@ export default function Flight() {
   // Zone names over the gate arches: their own small label batch.
   useEffect(() => {
     const batch = new LabelBatch({ pageSize: Math.min(512, getQuality().maxTexture) })
-    for (const g of GATES) {
+    for (const g of gates) {
       batch.add(`gate-${g.zone.id}`, [0, 16.4, zAt(g.meter)], { lines: [{ text: g.zone.name, size: 64, fill: '#ffffff' }], pxPerUnit: 26 }, { fade: 400 })
     }
     let cancelled = false
@@ -330,14 +346,14 @@ export default function Flight() {
       cancelled = true
       batch.dispose()
     }
-  }, [])
+  }, [gates])
 
   // Streams track chunks in and out between frames: at most two builds per pass.
   useEffect(() => {
     const group = groupRef.current
     let pass = 0
     const build = (i, density) => {
-      const mesh = buildChunk(i, { density }).build(sharedMaterials().blocks)
+      const mesh = track.buildChunk(i, { density }).build(sharedMaterials().blocks)
       mesh.receiveShadow = trackWindow.shadows
       chunkCache.set(i, mesh)
       group.add(mesh)
@@ -389,10 +405,10 @@ export default function Flight() {
       assets.stars.geometry.dispose()
       assets.stars.material.dispose()
       disposeBlocks(assets.warpFloor)
-      skyUniforms.topColor.value.copy(DEFAULT_TOP)
-      skyUniforms.horizonColor.value.copy(DEFAULT_HORIZON)
+      warpZone = -1
+      restoreSky(null)
     }
-  }, [assets])
+  }, [assets, track])
 
   useFrame((state, rawDelta) => {
     const delta = Math.min(rawDelta, 0.05)
@@ -513,9 +529,7 @@ export default function Flight() {
     }
     if (wasActive.current && !flight.active) {
       sfx.windStop()
-      skyUniforms.topColor.value.copy(DEFAULT_TOP)
-      skyUniforms.horizonColor.value.copy(DEFAULT_HORIZON)
-      if (scene.fog) scene.fog.color.set(FOG.color)
+      restoreSky(scene)
     }
     wasActive.current = flight.active
 
@@ -544,7 +558,7 @@ export default function Flight() {
     const floor = warpRef.current
     if (floor) {
       floor.visible = want.warp
-      if (want.warp) updateWarpFloor(floor, focus)
+      if (want.warp) updateWarpFloor(floor, focus, zones, warp)
     }
 
     // --- Trophies -----------------------------------------------------------------
@@ -556,7 +570,7 @@ export default function Flight() {
       if (tally.next < 0) tally.next = 0
       const trophies = flight.trophies
       while (tally.next < trophies.length && trophies[tally.next] <= flight.meter) {
-        tally.pending += trophyValue(trophies[tally.next])
+        tally.pending += trophyValue(trophies[tally.next], zones)
         tally.next += 1
       }
       if (tally.pending > 0 && now - tally.shownAt >= TROPHY_POPUP_MS) {
@@ -587,15 +601,15 @@ export default function Flight() {
 
     // --- Sky tint by zone ---------------------------------------------------------
     if (flight.active) {
-      const zi = zoneIndexAt(flight.meter)
+      const zi = zoneIndexAt(flight.meter, zones)
       // Each stage greets the spear with its own sound as it flies in.
       if (zi !== zoneHeard.current && releasedFor.current) {
         zoneHeard.current = zi
-        sfx.zone(ZONES[zi].id)
+        sfx.zone(zones[zi].id)
       }
-      const blend = smoothstep(ZONES[zi].start, ZONES[zi].start + 80, flight.meter)
-      const prev = ZONE_SKIES[Math.max(0, zi - 1)]
-      const cur = ZONE_SKIES[zi]
+      const blend = smoothstep(zones[zi].start, zones[zi].start + 80, flight.meter)
+      const prev = skies[Math.max(0, zi - 1)]
+      const cur = skies[zi]
       _skyTop.copy(prev[0]).lerp(cur[0], zi === 0 ? 1 : blend)
       _skyHorizon.copy(prev[1]).lerp(cur[1], zi === 0 ? 1 : blend)
       skyUniforms.topColor.value.copy(_skyTop)
@@ -604,7 +618,7 @@ export default function Flight() {
 
       const stars = starsRef.current
       if (stars && particles) {
-        const spaceBlend = zi === ZONES.length - 1 ? blend : 0
+        const spaceBlend = zi === zones.length - 1 ? blend : 0
         stars.visible = spaceBlend > 0.01
         stars.material.opacity = spaceBlend
         stars.position.copy(camera.position)

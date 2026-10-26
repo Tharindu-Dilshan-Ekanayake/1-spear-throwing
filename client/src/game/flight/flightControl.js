@@ -1,5 +1,4 @@
-import { ZONES } from '@shared/balance'
-import { zoneIndexAt } from '@shared/logic'
+import { worldZones, zoneIndexAt } from '@shared/logic'
 
 import { sfx } from '../../audio/sfx'
 import { getGame } from '../../store/game'
@@ -74,7 +73,8 @@ export function beginFlight(result) {
 
   timers.push(
     setTimeout(() => {
-      sfx.land(ZONES[zoneIndexAt(result.distance)].id)
+      const zones = worldZones(game.profile.world)
+      sfx.land(zones[zoneIndexAt(result.distance, zones)].id)
       setTimeout(sfx.wins, 250)
       if (runtime.flightFocus) {
         const f = runtime.flightFocus

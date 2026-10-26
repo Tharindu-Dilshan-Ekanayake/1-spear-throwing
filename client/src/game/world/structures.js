@@ -191,7 +191,8 @@ export function buildShop(blocks, { detail = true } = {}) {
   const s = span(step)
   blocks.addOn(s.x, -0.1, s.z, s.w, step.height + 0.1, s.d, LOBBY_STONE.stone, STYLE.STONE)
   blocks.addOn(s.x, step.height, s.z, s.w - 0.8, 0.04, s.d - 0.6, LOBBY_STONE.dark, STYLE.SMOOTH)
-  blocks.addOn(s.x + s.w / 2 - 0.2, step.height, s.z, 0.25, 0.06, s.d - 0.4, ARENA.gold, STYLE.GLOW)
+  // Its ends run into the fire bowls' bases instead of stopping flush with them.
+  blocks.addOn(s.x + s.w / 2 - 0.2, step.height, s.z, 0.25, 0.06, s.d - 0.7, ARENA.gold, STYLE.GLOW)
   for (const end of [-1, 1]) {
     const z = s.z + end * (s.d / 2 - 0.5)
     blocks.addOn(s.x + s.w / 2 - 0.5, step.height, z, 0.6, 0.7, 0.6, LOBBY_STONE.trim, STYLE.STONE)
@@ -212,7 +213,8 @@ export function buildShop(blocks, { detail = true } = {}) {
   for (const z of [minZ + 2.4, maxZ - 2.4]) {
     for (const lean of [-0.6, 0.6]) {
       blocks.add(x + 0.5, bottom + 4, z, 0.12, 6.2, 0.12, ARENA.wood, STYLE.SMOOTH, 0, lean, 0)
-      blocks.add(x + 0.5, bottom + 4 + Math.cos(lean) * 3.3, z + Math.sin(lean) * 3.3, 0.14, 0.7, 0.34, '#dfe7ef', STYLE.SMOOTH, 0, lean, 0)
+      // The head is clearly thicker than the shaft it caps, or their sides fight.
+      blocks.add(x + 0.5, bottom + 4 + Math.cos(lean) * 3.3, z + Math.sin(lean) * 3.3, 0.2, 0.7, 0.34, '#dfe7ef', STYLE.SMOOTH, 0, lean, 0)
     }
     blocks.add(x + 0.55, bottom + 4, z, 0.1, 1.4, 1.4, ARENA.gold, STYLE.GLOW, 0, 0.785, 0)
   }

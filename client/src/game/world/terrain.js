@@ -14,6 +14,8 @@ import { PALETTE } from '../sceneStyle'
 
 const CELL = 4
 const BOUNDS = { minX: -176, maxX: 156, minZ: -150, maxZ: 136 }
+/** How far north the hills reach, beside the start of the throw track. */
+export const HILLS_NORTH_Z = BOUNDS.minZ
 /** The throw track leaves the plaza northwards through this gap in the hills. */
 const CORRIDOR_HALF_WIDTH = 34
 const STEP = 2
@@ -82,8 +84,12 @@ export function addTree(blocks, x, base, z, scale = 1, rand = Math.random) {
   blocks.addOn(x, y, z, 1.1 * s, 1.1 * s, 1.1 * s, green)
 }
 
-/** Builds the hill ring into `blocks` and returns tree spots used (for tests/debug). */
-export function buildTerrain(blocks, { treeDensity = 1 } = {}) {
+/**
+ * Builds the hill ring into `blocks` and returns tree spots used (for tests/debug).
+ * `dirt` colours the hills' sides and `tree(blocks, x, base, z, scale, rand)` grows a
+ * tree, so another world can have its own hills.
+ */
+export function buildTerrain(blocks, { treeDensity = 1, dirt = PALETTE.dirt, tree = addTree } = {}) {
   const cols = Math.ceil((BOUNDS.maxX - BOUNDS.minX) / CELL)
   const rows = Math.ceil((BOUNDS.maxZ - BOUNDS.minZ) / CELL)
   const heights = new Int16Array(cols * rows)
@@ -104,7 +110,7 @@ export function buildTerrain(blocks, { treeDensity = 1 } = {}) {
     const x = BOUNDS.minX + run.i0 * CELL + width / 2
     const z = BOUNDS.minZ + run.j0 * CELL + depth / 2
     // Sunk slightly so no seam shows where hills meet the ground plane.
-    blocks.addOn(x, -0.5, z, width, run.h + 0.5, depth, PALETTE.dirt, STYLE.TERRAIN)
+    blocks.addOn(x, -0.5, z, width, run.h + 0.5, depth, dirt, STYLE.TERRAIN)
   }
 
   for (let j = 0; j < rows; j += 1) {
@@ -162,7 +168,7 @@ export function buildTerrain(blocks, { treeDensity = 1 } = {}) {
       const reach = TREE_HALF_WIDTH * scale
       if (placed.some((t) => Math.max(Math.abs(t.x - x), Math.abs(t.z - z)) < t.reach + reach)) continue
       placed.push({ x, z, reach })
-      addTree(blocks, x, h, z, scale, rand)
+      tree(blocks, x, h, z, scale, rand)
       trees += 1
     }
   }

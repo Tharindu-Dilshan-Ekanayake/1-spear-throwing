@@ -45,10 +45,29 @@ function TutorialBanner() {
   )
 }
 
+/** Which world you're in, once you're past the tutorial: World 3 only, it's the event. */
+function WorldBanner() {
+  const world = useGame((s) => s.profile.world)
+  const tutorial = useGame((s) => Boolean(TUTORIAL[s.profile.tutorialStep]))
+  const flying = useGame((s) => Boolean(s.flight))
+  if (world !== 3 || tutorial || flying) return null
+  return (
+    <div className="flex flex-col items-center" style={{ fontSize: u(40) }}>
+      <StrokeText stroke={u(8)} gradient="linear-gradient(180deg, #fff0c2 0%, #ffae3c 45%, #ff6a00 100%)">
+        Halloween World
+      </StrokeText>
+      <StrokeText stroke={u(6)} gradient={GRADIENTS.gold} style={{ fontSize: u(26) }}>
+        x3 Wins per metre
+      </StrokeText>
+    </div>
+  )
+}
+
 export function TopCenter() {
   return (
     <div className="pointer-events-none absolute left-1/2 flex -translate-x-1/2 flex-col items-center" style={{ top: u(10) }}>
       <TutorialBanner />
+      <WorldBanner />
     </div>
   )
 }

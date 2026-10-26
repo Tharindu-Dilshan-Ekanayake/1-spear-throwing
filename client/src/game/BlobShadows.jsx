@@ -52,6 +52,11 @@ export function BlobShadows() {
       fragmentShader,
       transparent: true,
       depthWrite: false,
+      // A decal on whatever it lies on: pulled towards the camera so it wins the depth
+      // test against floors and the thin marks painted on them.
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
       fog: true,
       uniforms: {
         fogColor: { value: new Color() },
@@ -92,7 +97,8 @@ export function BlobShadows() {
       const floor = groundHeightAt(p.x, p.z)
       const lift = Math.max(0, p.y - floor)
       const size = caster.size * Math.max(0.35, 1 - lift * 0.12)
-      _p.set(p.x, floor + 0.03, p.z)
+      // Clear of the lane floors' aim marks (3 cm up) as well as the floor itself.
+      _p.set(p.x, floor + 0.05, p.z)
       _s.set(size, size, 1)
       mesh.setMatrixAt(i, _m.compose(_p, _q, _s))
       i += 1

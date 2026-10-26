@@ -244,6 +244,34 @@ export const OFFLINE_MIN_MS = 60 * 1000
 /** Power needed to step through the World 2 portal. */
 export const WORLD2_POWER = 2.5e6
 
+// --- Worlds -----------------------------------------------------------------------
+
+/**
+ * World 3, Halloween: the same lobby by moonlight, and its own throw track whose stages
+ * pay three times World 1's Wins per metre. Starts and lengths match World 1's.
+ */
+export const HALLOWEEN_ZONES = [
+  { id: 'pumpkin', name: 'Pumpkin Patch', start: 0, winsPerMeter: 0.9 },
+  { id: 'graveyard', name: 'Graveyard', start: 150, winsPerMeter: 1.5 },
+  { id: 'haunted', name: 'Haunted Forest', start: 450, winsPerMeter: 2.4 },
+  { id: 'swamp', name: 'Witch Swamp', start: 900, winsPerMeter: 3.6 },
+  { id: 'bones', name: 'Bone Valley', start: 1500, winsPerMeter: 5.4 },
+  { id: 'vampire', name: 'Vampire Castle', start: 2400, winsPerMeter: 7.8 },
+  { id: 'spirit', name: 'Spirit Realm', start: 3600, winsPerMeter: 12 },
+]
+
+/** Power needed to open the World 3 portal. Once open it stays open, rebirths or not. */
+export const WORLD3_POWER = 10e6
+
+/**
+ * The worlds you can be in, by number. World 2 is still to come: its portal only
+ * awards a badge. `power` is what opening a world the first time takes.
+ */
+export const WORLDS = {
+  1: { id: 1, name: 'World 1', zones: ZONES, power: 0 },
+  3: { id: 3, name: 'Halloween World', zones: HALLOWEEN_ZONES, power: WORLD3_POWER },
+}
+
 // --- Premium ----------------------------------------------------------------------
 
 /**
@@ -283,4 +311,5 @@ export const BADGES = {
   firstPet: { name: 'Pet Owner' },
   kilometer: { name: 'Kilometre Club' },
   world2: { name: 'World Traveller' },
+  world3: { name: 'Trick or Treat' },
 }

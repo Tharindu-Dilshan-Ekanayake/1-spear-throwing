@@ -31,6 +31,7 @@ import {
   TROPHY_METERS,
   TROPHY_SPACING,
   TUTORIAL,
+  WORLDS,
   ZONES,
 } from './balance.js'
 
@@ -106,6 +107,9 @@ export function createProfile(id, name) {
     lastLane: -1,
     lastSeen: 0,
     settings: { autoRebirth: false },
+    /** The world you're in, and every world you've opened (see WORLDS). */
+    world: 1,
+    worlds: [1],
   }
 }
 
@@ -131,6 +135,8 @@ export function normalizeProfile(raw, id, name) {
     : []
   p.ownedPlanes = Array.isArray(raw.ownedPlanes) && raw.ownedPlanes.length ? raw.ownedPlanes : ['paper']
   if (!p.ownedPlanes.includes(p.equippedPlane)) p.equippedPlane = p.ownedPlanes[0]
+  p.worlds = [1, ...(Array.isArray(raw.worlds) ? raw.worlds : []).filter((w) => w !== 1 && WORLDS[w])]
+  if (!p.worlds.includes(p.world)) p.world = 1
   // The tutorial is for brand-new players only: anyone who has rebirthed is past it.
   if (p.rebirths > 0) p.tutorialStep = TUTORIAL.length
   p.v = PROFILE_VERSION
@@ -280,9 +286,13 @@ export function aimAt(seconds) {
   return phase < 1 ? phase : 2 - phase
 }
 
-export function zoneIndexAt(meter) {
-  for (let i = ZONES.length - 1; i >= 0; i -= 1) {
-    if (meter >= ZONES[i].start) return i
+/** The throw track's stages in `world`. */
+export const worldZones = (world) => (WORLDS[world] || WORLDS[1]).zones
+
+/** Index of the stage `meter` lies in, on the track with `zones`. */
+export function zoneIndexAt(meter, zones = ZONES) {
+  for (let i = zones.length - 1; i >= 0; i -= 1) {
+    if (meter >= zones[i].start) return i
   }
   return 0
 }
@@ -294,18 +304,18 @@ export function trophiesWithin(distance) {
   return out
 }
 
-export const trophyValue = (meter) => Math.max(1, Math.round(ZONES[zoneIndexAt(meter)].winsPerMeter * TROPHY_METERS))
+export const trophyValue = (meter, zones = ZONES) => Math.max(1, Math.round(zones[zoneIndexAt(meter, zones)].winsPerMeter * TROPHY_METERS))
 
 /** Wins for a throw before multipliers: metres flown in each zone, plus trophies. */
-export function baseThrowWins(distance) {
+export function baseThrowWins(distance, zones = ZONES) {
   let wins = 0
-  for (let i = 0; i < ZONES.length; i += 1) {
-    const start = ZONES[i].start
-    const end = i + 1 < ZONES.length ? ZONES[i + 1].start : Infinity
+  for (let i = 0; i < zones.length; i += 1) {
+    const start = zones[i].start
+    const end = i + 1 < zones.length ? zones[i + 1].start : Infinity
     const metres = Math.max(0, Math.min(distance, end) - start)
-    wins += metres * ZONES[i].winsPerMeter
+    wins += metres * zones[i].winsPerMeter
   }
-  for (const m of trophiesWithin(distance)) wins += trophyValue(m)
+  for (const m of trophiesWithin(distance)) wins += trophyValue(m, zones)
   return wins
 }
 
@@ -318,7 +328,7 @@ export function applyThrow(profile, now, aim = 1) {
   const grade = throwGrade(aim)
   const distance = Math.round(throwDistance(profile.power) * grade.mult * 10) / 10
   const multiplier = winsMultiplier(profile, now)
-  const wins = Math.max(1, Math.round(baseThrowWins(distance) * multiplier))
+  const wins = Math.max(1, Math.round(baseThrowWins(distance, worldZones(profile.world)) * multiplier))
   profile.wins += wins
   profile.stats.throws += 1
   profile.stats.bestDistance = Math.max(profile.stats.bestDistance, distance)
@@ -332,6 +342,23 @@ export function applyThrow(profile, now, aim = 1) {
     duration: flightDuration(distance),
     cooldown: flightDuration(distance) + THROW_RECOVERY,
   }
+}
+
+// --- Worlds -----------------------------------------------------------------------
+
+/**
+ * Moves to `world`. A world you haven't opened yet opens if you have its Power; after
+ * that it stays open, so a rebirth never strands you outside it.
+ */
+export function travel(profile, world) {
+  const target = WORLDS[world]
+  if (!target) return { ok: false, error: 'Coming soon!' }
+  if (!profile.worlds.includes(world)) {
+    if (profile.power < target.power) return { ok: false, error: 'Not enough Power!' }
+    profile.worlds.push(world)
+  }
+  profile.world = world
+  return { ok: true, world }
 }
 
 // --- Planes ------------------------------------------------------------------------

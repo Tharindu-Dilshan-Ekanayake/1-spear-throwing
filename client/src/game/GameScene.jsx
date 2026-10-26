@@ -4,6 +4,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { WebGLRenderer } from 'three'
 
 import { useBloxity } from '../bloxity/BloxityContext'
+import { exposeRenderer } from '../debug'
 import { useQuality } from '../store/quality'
 import ErrorBoundary from '../ui/ErrorBoundary'
 import BlobShadows from './BlobShadows'
@@ -25,9 +26,10 @@ import Lighting from './Lighting'
 import PerfProbe from './PerfProbe'
 import Player from './Player'
 import ShaderWarmup from './ShaderWarmup'
-import { FOG, SKY } from './sceneStyle'
+import { SKY } from './sceneStyle'
 import Sky from './Sky'
 import World from './world/World'
+import { loadHalloween, useWorld } from './worldLook'
 
 // r3f-perf is a dev-only overlay (?perf in the URL). The DEV check is static, so the
 // import and the package are dropped from production builds entirely.
@@ -39,6 +41,9 @@ const showDevPerf = import.meta.env.DEV && new URLSearchParams(window.location.s
 // The track and flight are their own chunk, fetched once the lobby is on screen so they
 // never delay time-to-playable.
 const Flight = lazy(() => import('./flight/Flight'))
+// World 3's lobby and track: one more chunk, fetched the first time you go there.
+const HalloweenLobby = lazy(() => loadHalloween().then((m) => ({ default: m.HalloweenLobby })))
+const HalloweenFlight = lazy(() => loadHalloween().then((m) => ({ default: m.HalloweenFlight })))
 
 /**
  * Fires `onFirstFrame` after the renderer has actually drawn once.
@@ -79,6 +84,8 @@ export function GameScene({ onReady }) {
   const settings = useQuality((s) => s.settings)
   const antialias = useQuality((s) => s.antialias)
   const degrade = useQuality((s) => s.degrade)
+  const world = useWorld((s) => s.shown)
+  const fogColor = useWorld((s) => s.look.fog.color)
 
   const [warmedUp, setWarmedUp] = useState(false)
   const [firstFrame, setFirstFrame] = useState(false)
@@ -107,8 +114,9 @@ export function GameScene({ onReady }) {
   // A lost context (GPU reset, too many tabs, backgrounded on mobile) is recovered by
   // remounting the canvas, which builds a fresh context and re-uploads everything.
   // Game state lives in stores, so nothing is lost but a moment of rendering.
-  const handleCreated = useCallback(({ gl }) => {
+  const handleCreated = useCallback(({ gl, scene }) => {
     performance.mark('pp:gl-created')
+    exposeRenderer(gl, scene)
     gl.setClearColor(SKY.horizon)
     // Checking every program's compile status forces the driver to finish it on the
     // spot. Worth it while developing; in production it only costs start-up time.
@@ -168,13 +176,20 @@ export function GameScene({ onReady }) {
         camera={{ position: [0, 6, 26], fov: 60, near: 0.5, far: settings.viewDistance }}
         onCreated={handleCreated}
       >
-        <fog attach="fog" args={[FOG.color, settings.fogNear, settings.viewDistance * 0.95]} />
+        <fog attach="fog" args={[fogColor, settings.fogNear, settings.viewDistance * 0.95]} />
         <ViewDistance far={settings.viewDistance} />
         <PerformanceMonitor bounds={() => [45, Infinity]} onDecline={handleDecline} />
 
         <Sky />
         <Lighting />
-        <World />
+        {/* Each world builds its own lobby, and drops it (and its GPU buffers) on leaving. */}
+        {world === 3 ? (
+          <Suspense fallback={null}>
+            <HalloweenLobby />
+          </Suspense>
+        ) : (
+          <World />
+        )}
         <WorldLabels />
         <SpearShop />
         <EggDisplays />
@@ -191,9 +206,7 @@ export function GameScene({ onReady }) {
         <BlobShadows />
         <TrainingFX />
         {warmedUp && firstFrame && (
-          <Suspense fallback={null}>
-            <Flight />
-          </Suspense>
+          <Suspense fallback={null}>{world === 3 ? <HalloweenFlight key="w3" /> : <Flight key="w1" />}</Suspense>
         )}
 
         <FollowCamera />

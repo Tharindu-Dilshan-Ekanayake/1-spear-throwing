@@ -7,11 +7,13 @@
  * Units are roughly metres - the avatar is 1.8 tall. +X is east, -Z is north, which is
  * "forward" from spawn and the direction spears are thrown.
  *
- * Seen from spawn, as in the reference: the throw area straight ahead (north), opening
- * onto the River field, with the reward chest on its left and the World 2 portal on its
- * right; the spear shop in two rows along the west wall; the training lanes side by
- * side on a raised deck to the south-west; the castle to the south-east with the eggs
- * lined up in front of it; the leaderboards and the Shadow Egg along the east side.
+ * Seen from spawn, laid out in mirror pairs: the throw area straight ahead (north),
+ * opening onto the River field, with the World 3 portal on its left and the World 2
+ * portal on its right; two grass beds either side of the way there; the reward chest
+ * and the big Shadow Egg either side of the spawn square; the spear shop in two rows
+ * along the west wall and the leaderboards along the east one; the training lanes side
+ * by side on a raised deck to the south-west, and the castle to the south-east with the
+ * eggs lined up in front of it.
  *
  * Rects are `{ minX, maxX, minZ, maxZ }` on the ground plane.
  */
@@ -135,13 +137,16 @@ export const padRect = (pad) => ({
 /** The castle filling the south-east corner; its gate faces the plaza at `gateX`. */
 export const CASTLE = { minX: 4, maxX: 52, minZ: 37, maxZ: 44, gateX: 28 }
 
-/** Eggs lined up in front of the castle, and the big Shadow Egg on the east side. */
+/**
+ * Eggs lined up in front of the castle, and the big Shadow Egg right of the spawn
+ * square, opposite the reward chest.
+ */
 export const EGG_STANDS = [
   { eggId: 'basic', x: 11, z: 28 },
   { eggId: 'meadow', x: 18, z: 28 },
   { eggId: 'sunset', x: 38, z: 28 },
   { eggId: 'unicorn', x: 45, z: 28 },
-  { eggId: 'demon', x: 46, z: 12, big: true },
+  { eggId: 'demon', x: 13, z: -3, big: true },
 ]
 export const EGG_TRIGGER_RADIUS = 4.2
 
@@ -157,19 +162,26 @@ export const LEADERBOARDS = [
 
 /** The World 2 portal, right of the throw area. */
 export const PORTAL = { x: 22, z: -32, radius: 3.4 }
-/** The reward chest, left of the throw area. */
-export const FREE_REWARD = { x: -22, z: -32, radius: 3 }
+/**
+ * Its twin left of the throw area: the way to World 3, and in World 3 the way back to
+ * World 1.
+ */
+export const PORTAL_WEST = { x: -PORTAL.x, z: PORTAL.z, radius: PORTAL.radius }
+export const PORTALS = [PORTAL, PORTAL_WEST]
+/** The reward chest, left of the spawn square. */
+export const FREE_REWARD = { x: -13, z: -3, radius: 3 }
 export const WATERFALL = { x: 40, z: -40 }
 
 /**
- * Raised grass beds round the plaza, each with a tree or two: `trees` are offsets from
- * the bed's centre. Walkable (they're low), but the trunks are solid.
+ * Raised grass beds round the plaza, in mirror pairs: `trees` are offsets from the
+ * bed's centre. Walkable (they're low), but the trunks are solid. The south pair are
+ * flower beds, so they don't hide the lanes and the eggs behind them.
  */
 export const PLANTERS = [
   { x: -18, z: -13, w: 9, d: 6, trees: [[-2, 0], [2.4, 0.6]] },
-  { x: 18, z: -13, w: 9, d: 6, trees: [[2, 0], [-2.4, -0.6]] },
-  { x: -18, z: 13, w: 8, d: 6, trees: [[0, 0]] },
-  { x: 20, z: 13, w: 8, d: 6, trees: [[0, 0]] },
+  { x: 18, z: -13, w: 9, d: 6, trees: [[2, 0], [-2.4, 0.6]] },
+  { x: -18, z: 13, w: 9, d: 6, trees: [] },
+  { x: 18, z: 13, w: 9, d: 6, trees: [] },
 ]
 export const PLANTER_HEIGHT = 0.8
 
@@ -193,9 +205,8 @@ export const STATIC_COLLIDERS = [
   box(SPHINX_STAND.x, SPHINX_STAND.z, 3, 3),
   ...LEADERBOARDS.map((b) => box(b.x, b.z, 0.6, 4.7)),
   box(FREE_REWARD.x, FREE_REWARD.z, 1.7, 1.3),
-  // The portal ring's base; the swirl itself is walk-through.
-  box(PORTAL.x - PORTAL.radius, PORTAL.z, 0.6, 0.8),
-  box(PORTAL.x + PORTAL.radius, PORTAL.z, 0.6, 0.8),
+  // The portal rings' bases; the swirls themselves are walk-through.
+  ...PORTALS.flatMap((p) => [box(p.x - p.radius, p.z, 0.6, 0.8), box(p.x + p.radius, p.z, 0.6, 0.8)]),
   // Pillars at the throw area's front corners, and the railing along its north edge.
   box(STAGE.minX + 1, STAGE.minZ + 1, 0.9, 0.9),
   box(STAGE.maxX - 1, STAGE.minZ + 1, 0.9, 0.9),
@@ -244,6 +255,14 @@ export function padAt(x, z) {
     if (inRect(padRect(pad), x, z)) return pad.index
   }
   return -1
+}
+
+/** The portal whose swirl (x, z) stands in, give or take `margin`, or null. */
+export function portalAt(x, z, margin = 0) {
+  for (const p of PORTALS) {
+    if (Math.hypot(p.x - x, p.z - z) < p.radius + margin) return p
+  }
+  return null
 }
 
 /** The egg stand within reach of (x, z), or null. */

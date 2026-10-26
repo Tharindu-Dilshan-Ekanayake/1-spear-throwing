@@ -76,6 +76,12 @@ export const runtime = {
    */
   ghostThrows: [],
 
+  /**
+   * Where a portal sent the player ({ x, z }), applied once the screen has faded out
+   * and the new world is up (see worldLook.js).
+   */
+  pendingSpawn: null,
+
   /** Walls that come and go at runtime, e.g. locked training lanes. */
   dynamicColliders: [],
 

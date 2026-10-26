@@ -24,7 +24,9 @@ function crenellate(blocks, x0, x1, y, z, depth) {
  */
 function tower(blocks, x, z, size, height) {
   const front = z - size / 2
-  blocks.addOn(x, 0, z, size, height, size, STONE, STYLE.STONE)
+  // The body stands a little proud of the ledge's top, so the two tops never share a
+  // plane (they did, and flickered).
+  blocks.addOn(x, 0, z, size, height + 0.1, size, STONE, STYLE.STONE)
   // A ledge round the top, then the battlements on it.
   blocks.addOn(x, height - 0.5, z, size + 0.5, 0.5, size + 0.5, LOBBY_STONE.trim, STYLE.STONE)
   for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, -1], [0, 1], [-1, 0], [1, 0]]) {
@@ -85,17 +87,44 @@ export function buildCastle(blocks, props, { detail = true } = {}) {
   props.add(RING, { position: [SPHINX_STAND.x, 4.6, SPHINX_STAND.z + 2.2], color: ARENA.gold, style: STYLE.GLOW })
 }
 
-/** The raised grass beds round the plaza, each with its trees and a few flowers. */
+const FLOWERS = ['#ff6fb8', '#ffe45c', '#ffffff', '#ff8a3c', '#b47cff']
+
+/**
+ * A bed of flowers in tidy rows, with a low bush at each corner: nothing taller than a
+ * metre, so it hides nothing behind it.
+ */
+function flowerBed(blocks, p, h) {
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) blocks.addOn(p.x + sx * (p.w / 2 - 0.9), h, p.z + sz * (p.d / 2 - 0.9), 1.2, 0.9, 1.2, '#7fcf3a', STYLE.STUDS)
+  }
+  let k = 0
+  for (let ix = -2; ix <= 2; ix += 1) {
+    for (let iz = -1; iz <= 1; iz += 1) {
+      // The corners are the bushes'.
+      if (Math.abs(ix) === 2 && iz !== 0) continue
+      const x = p.x + ix * 1.5
+      const z = p.z + iz * 1.5
+      blocks.addOn(x, h, z, 0.1, 0.35, 0.1, '#3a9a2a', STYLE.SMOOTH)
+      blocks.addOn(x, h + 0.35, z, 0.36, 0.22, 0.36, FLOWERS[k % FLOWERS.length], STYLE.SMOOTH)
+      k += 1
+    }
+  }
+}
+
+/**
+ * The raised grass beds round the plaza: those with trees get a row of three flowers
+ * along their front, the rest are flower beds.
+ */
 export function buildPlanters(blocks, rand) {
   const h = PLANTER_HEIGHT
   for (const p of PLANTERS) {
     blocks.addOn(p.x, -0.1, p.z, p.w, h + 0.1 - 0.3, p.d, LOBBY_STONE.stone, STYLE.STONE)
     blocks.addOn(p.x, h - 0.3, p.z, p.w + 0.2, 0.32, p.d + 0.2, GRASS_COLOR, STYLE.STUDS)
-    for (const [dx, dz] of p.trees) addTree(blocks, p.x + dx, h, p.z + dz, 0.9, rand)
-    for (let i = 0; i < 3; i += 1) {
-      const fx = p.x + (rand() - 0.5) * (p.w - 1.5)
-      const fz = p.z + (rand() - 0.5) * (p.d - 1.5)
-      blocks.addOn(fx, h, fz, 0.3, 0.3, 0.3, ['#ff6fb8', '#ffe45c', '#ffffff'][i], STYLE.SMOOTH)
+    if (!p.trees.length) {
+      flowerBed(blocks, p, h)
+      continue
     }
+    for (const [dx, dz] of p.trees) addTree(blocks, p.x + dx, h, p.z + dz, 0.9, rand)
+    for (let i = 0; i < 3; i += 1) blocks.addOn(p.x + (i - 1) * 2.4, h, p.z + p.d / 2 - 0.8, 0.3, 0.3, 0.3, FLOWERS[i], STYLE.SMOOTH)
   }
 }

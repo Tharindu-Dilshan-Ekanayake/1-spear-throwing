@@ -204,3 +204,43 @@ test('the shop sells for Wins only', () => {
   assert.equal(p.passes.laneVeryOp, true)
   assert.equal(p.wins, 0)
 })
+
+test('World 3 opens with enough Power, stays open after a rebirth, and pays x3 Wins', async () => {
+  const { WORLD3_POWER } = await import('../../shared/balance.js')
+  const { travel } = await import('../../shared/logic.js')
+  const p = createProfile('a', 'A')
+  assert.equal(travel(p, 3).ok, false, 'locked without the Power')
+  assert.equal(travel(p, 2).ok, false, 'World 2 is not open yet')
+  p.power = WORLD3_POWER
+  const w1 = applyThrow(p, 0, 1).wins
+  assert.equal(travel(p, 3).ok, true)
+  assert.equal(p.world, 3)
+  const w3 = applyThrow(p, 0, 1).wins
+  assert.ok(Math.abs(w3 / w1 - 3) < 0.05, `x3 Wins, got ${w3 / w1}`)
+  p.power = 0
+  assert.equal(travel(p, 1).ok, true)
+  assert.equal(travel(p, 3).ok, true, 'still open at 0 Power')
+  assert.deepEqual(normalizeProfile(JSON.parse(JSON.stringify(p)), 'a', 'A').worlds, [1, 3])
+  assert.equal(normalizeProfile({ world: 3, worlds: [1] }, 'a', 'A').world, 1, 'a world you never opened falls back to 1')
+})
+
+test('the west portal moves you between worlds and respawns you', async () => {
+  const { WORLD3_POWER } = await import('../../shared/balance.js')
+  const { PORTAL_WEST } = await import('../../shared/world.js')
+  const events = []
+  const travels = []
+  const p = createProfile('a', 'A')
+  p.power = WORLD3_POWER
+  const pos = { x: PORTAL_WEST.x, y: 0, z: PORTAL_WEST.z }
+  const s = new PlayerSession(p, { now: 0, emit: (type, payload) => events.push([type, payload]), getPosition: () => pos, onTravel: (world, spawn) => travels.push([world, spawn]) })
+  s.handle('portal', {}, 1000)
+  assert.equal(p.world, 3)
+  const moved = events.find(([type]) => type === 'world')
+  assert.ok(moved && moved[1].world === 3 && Math.abs(moved[1].z - SPAWN.z) < 3)
+  assert.equal(travels.length, 1)
+  s.handle('portal', {}, 2000)
+  assert.equal(p.world, 1, 'and back again')
+  pos.x = 0
+  s.handle('portal', {}, 3000)
+  assert.equal(p.world, 1, 'nowhere near a portal: nothing happens')
+})

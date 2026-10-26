@@ -2,6 +2,7 @@ import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useState } from 'react'
 
 import { mulberry32 } from '@shared/rng'
+import { PORTAL, PORTAL_WEST } from '@shared/world'
 
 import { useQuality } from '../../store/quality'
 import { asToyInstance, BlockSet, disposeBlocks, PropBuilder } from '../blocks'
@@ -10,7 +11,8 @@ import { createToyMaterial, sharedMaterials, toyTime } from '../materials'
 import { createGroundGeometry, createGroundMap } from './ground'
 import { buildCastle, buildPlanters } from './castle'
 import { buildEggStands } from './eggs'
-import { buildPortalFrame } from './portalFrame'
+import { jackOLantern } from '../halloween/props'
+import { buildPortalFrame, HALLOWEEN_FRAME } from './portalFrame'
 import { buildStage } from './stage'
 import { buildLanes, buildShop } from './structures'
 import { buildTargets } from './targets'
@@ -19,9 +21,9 @@ import { buildWaterfall } from './waterfall'
 import { buildTerrain } from './terrain'
 
 /**
- * The static lobby: ground plane, every box (hills, trees, lane floors, stages) in one
- * InstancedMesh, and every non-box prop (targets...) merged into one mesh. Three draw
- * calls for the whole environment.
+ * World 1's static lobby: ground plane, every box (hills, trees, lane floors, stages)
+ * in one InstancedMesh, and every non-box prop (targets...) merged into one mesh. Three
+ * draw calls for the whole environment. (World 3 has its own, in halloween/.)
  *
  * Built once. Quality only decides tree density at build time and whether the result
  * casts/receives realtime shadows.
@@ -72,7 +74,11 @@ export function World() {
     buildStage(set, propBuilder, { detail })
     buildCastle(set, propBuilder, { detail })
     buildPlanters(set, mulberry32(21))
-    buildPortalFrame(set)
+    buildPortalFrame(set, PORTAL)
+    // World 3's portal, its Halloween colours and a jack-o'-lantern either side
+    // advertising what's through it.
+    buildPortalFrame(set, PORTAL_WEST, HALLOWEEN_FRAME)
+    for (const side of [-1, 1]) jackOLantern(set, PORTAL_WEST.x + side * 5.4, 0, PORTAL_WEST.z + 0.6, 1.1)
     buildWaterfall(set)
 
     buildTargets(propBuilder)

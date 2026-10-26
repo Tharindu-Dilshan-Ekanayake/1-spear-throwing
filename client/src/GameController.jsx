@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { useBloxity } from './bloxity/BloxityContext'
 import { startGameTicker } from './game/ticker'
+import { watchWorld } from './game/worldLook'
 import { startConnection, stopConnection } from './net/connection'
 
 const GUEST_KEY = 'pp.guestId'
@@ -56,6 +57,9 @@ export function GameController() {
     const stop = startGameTicker()
     return stop
   }, [])
+
+  // The world on screen follows the profile's (a portal, or a save from World 3).
+  useEffect(() => watchWorld(), [])
 
   useEffect(() => {
     if (!settled) return undefined

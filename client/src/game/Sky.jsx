@@ -16,8 +16,9 @@ import {
 import { mulberry32 } from '@shared/rng'
 
 import { useQuality } from '../store/quality'
-import { CLOUDS, LIGHTS } from './sceneStyle'
+import { LIGHTS } from './sceneStyle'
 import { skyUniforms } from './skyState'
+import { useWorld } from './worldLook'
 
 /** Unit dome, scaled to just inside the camera's far plane for the current preset. */
 const SKY_RADIUS = 1
@@ -87,13 +88,13 @@ function SkyDome() {
  * Baked rather than lit so the clouds stay bright white regardless of the scene lights,
  * and the flat per-face colour gives the low-poly look.
  */
-function createPuffGeometry() {
+function createPuffGeometry(clouds) {
   const geometry = new IcosahedronGeometry(1, 1)
   const position = geometry.getAttribute('position')
   const colors = new Float32Array(position.count * 3)
 
-  const top = new Color(CLOUDS.top)
-  const bottom = new Color(CLOUDS.bottom)
+  const top = new Color(clouds.top)
+  const bottom = new Color(clouds.bottom)
   const sun = new Vector3(...LIGHTS.sunDirection).normalize()
   const a = new Vector3()
   const b = new Vector3()
@@ -173,6 +174,7 @@ function buildCloudLayout(count) {
  */
 function Clouds() {
   const count = useQuality((s) => s.settings.cloudCount)
+  const clouds = useWorld((s) => s.look.clouds)
 
   const mesh = useMemo(() => {
     const layout = buildCloudLayout(count)
@@ -193,7 +195,7 @@ function Clouds() {
 
     // fog off: the clouds sit past the fog's far distance and would vanish.
     const instanced = new InstancedMesh(
-      createPuffGeometry(),
+      createPuffGeometry(clouds),
       new MeshBasicMaterial({ vertexColors: true, fog: false }),
       puffs.length,
     )
@@ -203,7 +205,7 @@ function Clouds() {
     instanced.computeBoundingSphere()
     instanced.position.set(...CLOUD_CENTER)
     return instanced
-  }, [count])
+  }, [count, clouds])
 
   useEffect(
     () => () => {
@@ -222,10 +224,21 @@ function Clouds() {
   return <primitive ref={ref} object={mesh} />
 }
 
+/** The canvas's clear colour, kept at the world's horizon (the dome covers it anyway). */
+function ClearColor() {
+  const gl = useThree((s) => s.gl)
+  const horizon = useWorld((s) => s.look.sky.horizon)
+  useEffect(() => {
+    gl.setClearColor(horizon)
+  }, [gl, horizon])
+  return null
+}
+
 /** Gradient sky plus drifting low-poly clouds. */
 export function Sky() {
   return (
     <>
+      <ClearColor />
       <SkyDome />
       <Clouds />
     </>

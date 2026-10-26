@@ -25,6 +25,8 @@ export const PlayerState = schema(
     wins: t.float64(),
     rebirths: t.uint16(),
     level: t.uint16(),
+    /** Which world they're in: players only see others in the same one. */
+    world: t.uint8(),
   },
   'PlayerState',
 )

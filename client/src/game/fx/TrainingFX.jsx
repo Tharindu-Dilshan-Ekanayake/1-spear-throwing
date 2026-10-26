@@ -12,7 +12,7 @@ import { runtime } from '../runtime'
 import { createSpearMesh, disposeSpearMesh, SPEAR_TIP, spearOrientation } from '../spear'
 import { targetPoint } from '../world/targets'
 import { drainTrainFx } from './fxQueue'
-import { spawnPopup, updatePopups } from './popups'
+import { sideSpot, spawnPopup, updatePopups } from './popups'
 
 const MAX_SHOTS = 10
 const FLIGHT_TIME = 0.42
@@ -139,18 +139,16 @@ export function TrainingFX() {
       }
       if (flight >= 1 && !shot.stuck) {
         shot.stuck = true
-        _popupAt.set(
-          player.position.x + (Math.random() - 0.5) * 3,
-          player.position.y + 0.6 + Math.random() * 1.4,
-          player.position.z + (Math.random() - 0.5) * 1.5,
-        )
-        spawnPopup(`+${formatNumber(shot.gain)} POWER`, _popupAt, { iconUrl: iconUrl('muscle') })
+        // Beside the player, left and right in turn (see sideSpot), level with the chest.
+        _popupAt.set(player.position.x, player.position.y + 1.2, player.position.z)
+        spawnPopup(`+${formatNumber(shot.gain)} POWER`, _popupAt, { iconUrl: iconUrl('muscle'), offset: sideSpot() })
         // A lane's target takes a thwack; a click throw thuds into the ground.
         if (shot.lane >= 0) sfx.targetHit()
         else sfx.power()
         if (shot.leveledUp) {
+          // Its own spot over the head, clear of the Power columns either side.
           _popupAt.set(player.position.x, player.position.y + 2.6, player.position.z)
-          spawnPopup('LEVEL UP!', _popupAt, { gradient: LEVEL_GRADIENT, scale: 1.5, life: 1600 })
+          spawnPopup('LEVEL UP!', _popupAt, { gradient: LEVEL_GRADIENT, scale: 1.5, life: 1600, offset: [0, -60] })
         }
       }
       if (shot.stuck) {

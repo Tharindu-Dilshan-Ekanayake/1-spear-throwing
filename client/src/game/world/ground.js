@@ -10,11 +10,12 @@ import {
 
 import {
   CASTLE,
+  EGG_STANDS,
   FREE_REWARD,
   LANE_DECK,
   LEADERBOARDS,
   PLAZA,
-  PORTAL,
+  PORTALS,
   SHOP,
   SHOP_STAGES,
   STAGE,
@@ -65,17 +66,18 @@ function painter(ctx) {
   return { rect, bordered, disc }
 }
 
-export function createGroundMap(maxTexture) {
+/** `palette` is the world's floor colours (see PALETTE in sceneStyle.js). */
+export function createGroundMap(maxTexture, palette = PALETTE) {
   const canvas = document.createElement('canvas')
   canvas.width = MAP_W
   canvas.height = MAP_H
   const ctx = canvas.getContext('2d')
   const { rect, bordered, disc } = painter(ctx)
 
-  rect(MAP, PALETTE.plaza)
+  rect(MAP, palette.plaza)
 
   // Yellow sand round the throw area.
-  bordered({ minX: STAGE.minX - 3, maxX: STAGE.maxX + 3, minZ: THROW_LINE_Z, maxZ: STAGE.maxZ + 2.5 }, PALETTE.sand, PALETTE.sandEdge)
+  bordered({ minX: STAGE.minX - 3, maxX: STAGE.maxX + 3, minZ: THROW_LINE_Z, maxZ: STAGE.maxZ + 2.5 }, palette.sand, palette.sandEdge)
 
   // Paths from the spawn square to everything: north to the throw area, west to the
   // shop and along its front, south to the lanes' deck and along it, east to the
@@ -92,25 +94,31 @@ export function createGroundMap(maxTexture) {
     { minX: board - 5, maxX: board - 1, minZ: -27, maxZ: 25 },
     { minX: 4, maxX: PLAZA.maxX - 2, minZ: 21, maxZ: 25 },
   ]
-  for (const p of paths) bordered(p, PALETTE.path, PALETTE.pathEdge)
+  for (const p of paths) bordered(p, palette.path, palette.pathEdge)
   // Paths overlap; repaint the interiors so crossings don't show edges.
   for (const p of paths) {
-    rect({ minX: p.minX + 1, maxX: p.maxX - 1, minZ: p.minZ + 1, maxZ: p.maxZ - 1 }, PALETTE.path)
+    rect({ minX: p.minX + 1, maxX: p.maxX - 1, minZ: p.minZ + 1, maxZ: p.maxZ - 1 }, palette.path)
   }
   // The spawn square.
-  bordered({ minX: -8, maxX: 8, minZ: 0, maxZ: 12 }, PALETTE.path, PALETTE.pathEdge)
+  bordered({ minX: -8, maxX: 8, minZ: 0, maxZ: 12 }, palette.path, palette.pathEdge)
 
   // The red carpet from the eggs' walk up to the castle gate, edged in gold.
-  bordered({ minX: CASTLE.gateX - 2, maxX: CASTLE.gateX + 2, minZ: 21, maxZ: CASTLE.minZ + 2 }, PALETTE.carpet, PALETTE.gold)
+  bordered({ minX: CASTLE.gateX - 2, maxX: CASTLE.gateX + 2, minZ: 21, maxZ: CASTLE.minZ + 2 }, palette.carpet, palette.gold)
 
-  // Glowing rings under the portal and the reward chest.
-  disc(PORTAL.x, PORTAL.z, 6, PALETTE.sandEdge)
-  disc(PORTAL.x, PORTAL.z, 5, PALETTE.sand)
-  disc(FREE_REWARD.x, FREE_REWARD.z, 5, PALETTE.sandEdge)
-  disc(FREE_REWARD.x, FREE_REWARD.z, 4, PALETTE.sand)
+  // Glowing rings under the portals, and under the reward chest and the Shadow Egg
+  // either side of the spawn square.
+  for (const p of PORTALS) {
+    disc(p.x, p.z, 6, palette.sandEdge)
+    disc(p.x, p.z, 5, palette.sand)
+  }
+  const bigEgg = EGG_STANDS.find((s) => s.big)
+  for (const { x, z } of [FREE_REWARD, bigEgg]) {
+    disc(x, z, 5, palette.sandEdge)
+    disc(x, z, 4, palette.sand)
+  }
 
   // Waterfall pool at the foot of the north cliff.
-  rect({ minX: WATERFALL.x - 6, maxX: WATERFALL.x + 6, minZ: WATERFALL.z, maxZ: WATERFALL.z + 5 }, PALETTE.water)
+  rect({ minX: WATERFALL.x - 6, maxX: WATERFALL.x + 6, minZ: WATERFALL.z, maxZ: WATERFALL.z + 5 }, palette.water)
 
   const texture = new CanvasTexture(canvas)
   texture.colorSpace = SRGBColorSpace

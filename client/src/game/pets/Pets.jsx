@@ -164,7 +164,11 @@ export function Pets() {
   return <group ref={groupRef} />
 }
 
-/** The limited King Doggy, big and slowly turning on its showcase plinth. */
+/**
+ * The limited King Doggy, big and slowly turning from side to side on its showcase
+ * plinth. Models face +Z; the plinth stands before the castle with the plaza to its
+ * north, so it's turned half round to face the players.
+ */
 export function SphinxShowcase() {
   const ref = useRef(null)
   const stock = useGame((s) => s.sphinxStock)
@@ -172,7 +176,7 @@ export function SphinxShowcase() {
     updateWorldLabel('sphinx', sphinxLabelSpec(stock))
   }, [stock])
   useFrame((state) => {
-    if (ref.current) ref.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.6
+    if (ref.current) ref.current.rotation.y = Math.PI + Math.sin(state.clock.elapsedTime * 0.5) * 0.6
   })
   const mesh = useMemo(() => asToyInstance(petGeometry('kingDoggy'), sharedMaterials().toy), [])
   useEffect(() => () => mesh.dispose(), [mesh])

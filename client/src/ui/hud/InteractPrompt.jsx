@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 
-import { LANES, PLANES, SHOP, WORLD2_POWER } from '@shared/balance'
+import { LANES, PLANES, SHOP, WORLD2_POWER, WORLD3_POWER } from '@shared/balance'
 import { formatNumber } from '@shared/format'
 import { isLaneUnlocked } from '@shared/logic'
 
@@ -25,11 +25,20 @@ function usePrompt() {
   const atSphinx = useGame((s) => s.zone.sphinx)
   const atPortal = useGame((s) => s.zone.portal)
   const power = useGame((s) => s.profile.power)
+  const world = useGame((s) => s.profile.world)
+  const halloweenOpen = useGame((s) => s.profile.worlds.includes(3))
 
-  if (atPortal) {
+  if (atPortal === 'east') {
     return power >= WORLD2_POWER
       ? { title: 'World 2', action: 'Coming soon!', run: null }
       : { title: 'World 2', action: `Needs ${formatNumber(WORLD2_POWER)} Power (you have ${formatNumber(power)})`, run: null }
+  }
+  // Stepping in is enough: the portal takes you as soon as it can.
+  if (atPortal === 'west') {
+    if (world === 3) return { title: 'World 1', action: 'Going home…', run: null }
+    return halloweenOpen || power >= WORLD3_POWER
+      ? { title: 'World 3 - Halloween', action: 'Entering…', run: null }
+      : { title: 'World 3 - Halloween', action: `Needs ${formatNumber(WORLD3_POWER)} Power (you have ${formatNumber(power)})`, run: null }
   }
 
   if (atSphinx) {
